@@ -1,8 +1,11 @@
 'use client';
 
+import { useState } from 'react';
 import Image from 'next/image';
+import { ChevronDown, Users } from 'lucide-react';
 import type { Match, Prediction } from '@/lib/types';
 import { PredictionForm } from './PredictionForm';
+import { MatchBets } from './MatchBets';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 
@@ -32,31 +35,33 @@ function StatusBadge({ status }: { status: Match['status'] }) {
 }
 
 export function MatchCard({ match, prediction, playerId }: Props) {
+  const [showBets, setShowBets] = useState(false);
   const dt = new Date(match.match_date);
-  const dateLabel = dt.toLocaleString('es-MX', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
+  const timeLabel = dt.toLocaleTimeString('es-MX', {
     hour: '2-digit',
     minute: '2-digit',
   });
 
   const locked = match.status !== 'pending';
   const finished = match.status === 'finished';
+  const showScore =
+    (finished || match.status === 'live') &&
+    match.home_score != null &&
+    match.away_score != null;
 
   return (
     <Card>
       <CardContent className="p-4">
         <div className="mb-3 flex items-center justify-between text-xs text-muted-foreground">
-          <span>{dateLabel}</span>
+          <span className="font-medium">🕑 {timeLabel}</span>
           <StatusBadge status={match.status} />
         </div>
 
         <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
           <TeamRow name={match.home_team} flag={match.home_flag} />
           <div className="text-center font-bold">
-            {finished && match.home_score != null && match.away_score != null ? (
-              <span className="text-lg">
+            {showScore ? (
+              <span className={`text-lg tabular-nums ${match.status === 'live' ? 'text-grass' : ''}`}>
                 {match.home_score} – {match.away_score}
               </span>
             ) : (
@@ -68,31 +73,52 @@ export function MatchCard({ match, prediction, playerId }: Props) {
           </div>
         </div>
 
-        <div className="mt-4">
-          {!playerId ? (
-            <p className="text-center text-xs text-muted-foreground">
-              Entra con tu nombre para predecir.
-            </p>
-          ) : locked ? (
-            <div className="text-center text-sm">
-              {prediction ? (
-                <span className="text-muted-foreground">
-                  Tu predicción:{' '}
-                  <strong className="text-foreground">
-                    {prediction.pred_home}–{prediction.pred_away}
-                  </strong>
-                  {finished && (
-                    <Badge className="ml-2 bg-grass/20 text-grass" variant="outline">
-                      +{prediction.points} pts
-                    </Badge>
-                  )}
-                </span>
-              ) : (
-                <span className="text-muted-foreground">Sin predicción · bloqueado</span>
-              )}
-            </div>
+        <div className="mt-4 space-y-3">
+          {!locked ? (
+            !playerId ? (
+              <p className="text-center text-xs text-muted-foreground">
+                Entra con tu nombre para predecir.
+              </p>
+            ) : (
+              <PredictionForm playerId={playerId} matchId={match.id} initial={prediction} />
+            )
           ) : (
-            <PredictionForm playerId={playerId} matchId={match.id} initial={prediction} />
+            <>
+              {playerId && (
+                <div className="text-center text-sm">
+                  {prediction ? (
+                    <span className="text-muted-foreground">
+                      Tu predicción:{' '}
+                      <strong className="text-foreground">
+                        {prediction.pred_home}–{prediction.pred_away}
+                      </strong>
+                      {finished && (
+                        <Badge className="ml-2 bg-grass/20 text-grass" variant="outline">
+                          +{prediction.points} pts
+                        </Badge>
+                      )}
+                    </span>
+                  ) : (
+                    <span className="text-muted-foreground">No apostaste en este partido</span>
+                  )}
+                </div>
+              )}
+
+              <button
+                onClick={() => setShowBets((v) => !v)}
+                className="flex w-full items-center justify-center gap-1.5 rounded-md py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:bg-accent hover:text-accent-foreground"
+              >
+                <Users className="h-3.5 w-3.5" />
+                {showBets ? 'Ocultar apuestas' : 'Ver apuestas'}
+                <ChevronDown
+                  className={`h-3.5 w-3.5 transition-transform ${showBets ? 'rotate-180' : ''}`}
+                />
+              </button>
+
+              {showBets && (
+                <MatchBets matchId={match.id} finished={finished} currentPlayerId={playerId} />
+              )}
+            </>
           )}
         </div>
       </CardContent>

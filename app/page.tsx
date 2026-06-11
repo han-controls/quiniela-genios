@@ -6,6 +6,7 @@ import { getStoredPlayer, setStoredPlayer } from "@/lib/usePlayer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
+import { LivePanel } from "@/components/LivePanel";
 
 const SCORING = [
   { label: "Marcador exacto", pts: "3 pts" },
@@ -101,6 +102,8 @@ export default function HomePage() {
           </form>
         </CardContent>
       </Card>
+
+      <LivePanel />
 
       <Card>
         <CardContent className="p-6">

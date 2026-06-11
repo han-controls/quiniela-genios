@@ -12,6 +12,33 @@ import {
   STAGE_LABELS,
 } from '@/lib/types';
 
+// Clave de día (en hora local) para agrupar; ej. "2026-06-11".
+function dayKey(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+}
+
+// Encabezado legible de un día; ej. "jueves 11 de junio".
+function dayLabel(iso: string): string {
+  return new Date(iso).toLocaleDateString('es-MX', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+  });
+}
+
+// Agrupa una lista de partidos (ya ordenada por fecha) en bloques por día.
+function groupByDay(matches: Match[]): { key: string; label: string; items: Match[] }[] {
+  const groups: { key: string; label: string; items: Match[] }[] = [];
+  for (const m of matches) {
+    const key = dayKey(m.match_date);
+    const last = groups[groups.length - 1];
+    if (last && last.key === key) last.items.push(m);
+    else groups.push({ key, label: dayLabel(m.match_date), items: [m] });
+  }
+  return groups;
+}
+
 export default function PredictionsPage() {
   const { player, loaded } = usePlayer();
   const [matches, setMatches] = useState<Match[]>([]);
@@ -80,20 +107,27 @@ export default function PredictionsPage() {
     <div className="space-y-8">
       <h1 className="text-2xl font-bold">Partidos</h1>
       {stages.map((stage) => (
-        <section key={stage} className="space-y-3">
-          <h2 className="sticky top-0 z-10 bg-slate-950/90 py-1 text-lg font-bold text-grass backdrop-blur">
+        <section key={stage} className="space-y-4">
+          <h2 className="sticky top-14 z-10 -mx-4 bg-background/90 px-4 py-2 text-lg font-bold text-grass backdrop-blur">
             {STAGE_LABELS[stage] ?? stage}
           </h2>
-          {matches
-            .filter((m) => m.stage === stage)
-            .map((m) => (
-              <MatchCard
-                key={m.id}
-                match={m}
-                prediction={preds[m.id] ?? null}
-                playerId={player?.id ?? null}
-              />
-            ))}
+          {groupByDay(matches.filter((m) => m.stage === stage)).map((day) => (
+            <div key={day.key} className="space-y-3">
+              <h3 className="flex items-center gap-2 text-sm font-semibold capitalize text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                {day.label}
+                <span className="h-px flex-1 bg-border" />
+              </h3>
+              {day.items.map((m) => (
+                <MatchCard
+                  key={m.id}
+                  match={m}
+                  prediction={preds[m.id] ?? null}
+                  playerId={player?.id ?? null}
+                />
+              ))}
+            </div>
+          ))}
         </section>
       ))}
     </div>

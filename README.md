@@ -58,11 +58,13 @@ npm test           # lógica de puntuación (lib/scoring.test.ts)
 
 ## Deploy (Vercel)
 
-1. Conecta el repo en Vercel.
-2. Configura las 4 variables de entorno.
-3. En `vercel.json`, reemplaza `REEMPLAZAR_CON_TU_SYNC_SECRET` por tu `SYNC_SECRET`
-   (el cron corre cada 5 min y sincroniza resultados).
-4. Push a `main` → deploy automático.
+1. Conecta el repo en Vercel (detecta Next.js automáticamente).
+2. Configura las 4 variables de entorno (`.env.example`).
+3. Push a `main` → deploy automático.
+
+Para mantener los resultados al día, configura un **Cron Job** en Vercel
+(Settings → Cron Jobs) que llame a `/api/sync?secret=TU_SYNC_SECRET` cada 5 min.
+También puedes dispararlo manualmente con `curl` (ver arriba).
 
 ## Rutas
 

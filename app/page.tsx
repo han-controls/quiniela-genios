@@ -9,8 +9,9 @@ import { Card, CardContent } from "@/components/ui/card";
 import { LivePanel } from "@/components/LivePanel";
 
 const SCORING = [
-  { label: "Marcador exacto", pts: "3 pts" },
-  { label: "Resultado 1X2 correcto", pts: "1 pt" },
+  { label: "Acertar ganador (1X2)", pts: "+1 pt" },
+  { label: "Acertar marcador exacto", pts: "+2 pts" },
+  { label: "Ganador + marcador", pts: "3 pts" },
   { label: "Campeón del Mundial", pts: "10 pts" },
   { label: "Cada semifinalista", pts: "3 pts" },
 ];

@@ -1,7 +1,10 @@
 // Lógica de puntuación — aislada y testeable (sin dependencias de DB)
 
-export const POINTS_EXACT = 3;
-export const POINTS_OUTCOME = 1;
+// Ganador (1X2) y marcador exacto son apuestas independientes y aditivas:
+export const POINTS_WINNER = 1; // acertar quién gana (1X2)
+export const POINTS_EXACT = 2; // acertar el marcador exacto
+// Acertar ambos = 3 (1 + 2)
+
 export const POINTS_CHAMPION = 10;
 export const POINTS_SEMIFINALIST = 3;
 
@@ -13,46 +16,41 @@ export function outcome(home: number, away: number): Outcome {
   return 'X';
 }
 
-/**
- * Puntos de una predicción de marcador contra el resultado real.
- * - 3 pts: marcador exacto
- * - 1 pt: resultado 1X2 correcto (sin marcador exacto)
- * - 0 pts: resultado incorrecto
- */
-export function matchPoints(
-  predHome: number,
-  predAway: number,
-  realHome: number,
-  realAway: number,
-): number {
-  if (predHome === realHome && predAway === realAway) return POINTS_EXACT;
-  if (outcome(predHome, predAway) === outcome(realHome, realAway)) return POINTS_OUTCOME;
-  return 0;
-}
-
-// Forma mínima de una predicción para puntuarla (sirve para ambos tipos de apuesta).
+// Forma mínima de una predicción para puntuarla. Ambas partes son opcionales:
+// pred_outcome = apuesta de ganador; pred_home/pred_away = apuesta de marcador.
 export interface ScorablePrediction {
-  bet_type: string;
   pred_home: number | null;
   pred_away: number | null;
   pred_outcome: string | null;
 }
 
 /**
- * Puntos de una predicción contra el resultado real, según su tipo:
- * - 'score'  → marcador exacto (3) / resultado 1X2 (1) / fallo (0)
- * - 'winner' → ganador correcto (1) / fallo (0). Nunca da 3.
+ * Puntos de una predicción contra el resultado real (aditivo):
+ * - +1 si apostó ganador (1X2) y acertó
+ * - +2 si apostó marcador exacto y acertó
+ * Máximo 3 (ambos correctos). Sin apuestas o fallos → 0.
  */
 export function predictionPoints(
   pred: ScorablePrediction,
   realHome: number,
   realAway: number,
 ): number {
-  if (pred.bet_type === 'winner') {
-    return pred.pred_outcome === outcome(realHome, realAway) ? POINTS_OUTCOME : 0;
+  let points = 0;
+
+  if (pred.pred_outcome && pred.pred_outcome === outcome(realHome, realAway)) {
+    points += POINTS_WINNER;
   }
-  if (pred.pred_home == null || pred.pred_away == null) return 0;
-  return matchPoints(pred.pred_home, pred.pred_away, realHome, realAway);
+
+  if (
+    pred.pred_home != null &&
+    pred.pred_away != null &&
+    pred.pred_home === realHome &&
+    pred.pred_away === realAway
+  ) {
+    points += POINTS_EXACT;
+  }
+
+  return points;
 }
 
 /**

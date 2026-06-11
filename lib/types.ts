@@ -23,17 +23,15 @@ export interface Player {
   created_at: string;
 }
 
-export type BetType = 'score' | 'winner';
 export type Outcome = '1' | 'X' | '2';
 
 export interface Prediction {
   id: string;
   player_id: string;
   match_id: string;
-  bet_type: BetType;
-  pred_home: number | null;
+  pred_home: number | null;   // apuesta de marcador (opcional)
   pred_away: number | null;
-  pred_outcome: Outcome | null;
+  pred_outcome: Outcome | null; // apuesta de ganador 1X2 (opcional)
   points: number;
 }
 
@@ -59,9 +57,9 @@ export interface LeaderboardRow {
   player_id: string;
   name: string;
   total: number;
-  exact: number;     // marcadores exactos (3 pts c/u)
-  outcomes: number;  // resultados 1X2 (1 pt c/u)
-  special: number;   // puntos especiales
+  exact: number;   // marcadores exactos acertados (+2 c/u)
+  winners: number; // ganadores 1X2 acertados (+1 c/u)
+  special: number; // puntos especiales
 }
 
 // Orden de fases para agrupar/ordenar en la UI

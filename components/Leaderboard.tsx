@@ -3,7 +3,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { usePlayer } from '@/lib/usePlayer';
-import { POINTS_EXACT, POINTS_OUTCOME } from '@/lib/scoring';
 import type { LeaderboardRow } from '@/lib/types';
 import {
   Table,
@@ -36,7 +35,7 @@ export function Leaderboard() {
         name: p.name,
         total: 0,
         exact: 0,
-        outcomes: 0,
+        winners: 0,
         special: 0,
       });
     }
@@ -44,9 +43,11 @@ export function Leaderboard() {
     for (const pr of preds ?? []) {
       const row = byPlayer.get(pr.player_id);
       if (!row) continue;
-      row.total += pr.points ?? 0;
-      if (pr.points === POINTS_EXACT) row.exact++;
-      else if (pr.points === POINTS_OUTCOME) row.outcomes++;
+      const pts = pr.points ?? 0;
+      row.total += pts;
+      // Descomposición: +2 marcador exacto, +1 ganador (3 = ambos).
+      if (pts === 2 || pts === 3) row.exact++;
+      if (pts === 1 || pts === 3) row.winners++;
     }
 
     for (const sp of specials ?? []) {
@@ -97,8 +98,8 @@ export function Leaderboard() {
             <TableHead className="w-10">#</TableHead>
             <TableHead>Jugador</TableHead>
             <TableHead className="text-right">Pts</TableHead>
-            <TableHead className="hidden text-right sm:table-cell" title="Marcadores exactos">3pt</TableHead>
-            <TableHead className="hidden text-right sm:table-cell" title="Resultados 1X2">1pt</TableHead>
+            <TableHead className="hidden text-right sm:table-cell" title="Marcadores exactos (+2)">Exa</TableHead>
+            <TableHead className="hidden text-right sm:table-cell" title="Ganadores 1X2 (+1)">Gan</TableHead>
             <TableHead className="hidden text-right sm:table-cell" title="Especiales">Esp</TableHead>
           </TableRow>
         </TableHeader>
@@ -115,7 +116,7 @@ export function Leaderboard() {
                 </TableCell>
                 <TableCell className="text-right font-extrabold text-grass">{r.total}</TableCell>
                 <TableCell className="hidden text-right text-muted-foreground sm:table-cell">{r.exact}</TableCell>
-                <TableCell className="hidden text-right text-muted-foreground sm:table-cell">{r.outcomes}</TableCell>
+                <TableCell className="hidden text-right text-muted-foreground sm:table-cell">{r.winners}</TableCell>
                 <TableCell className="hidden text-right text-muted-foreground sm:table-cell">{r.special}</TableCell>
               </TableRow>
             );

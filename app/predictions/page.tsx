@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { usePlayer } from '@/lib/usePlayer';
 import { MatchCard } from '@/components/MatchCard';
+import { RefreshButton } from '@/components/RefreshButton';
 import {
   type Match,
   type Prediction,
@@ -105,7 +106,10 @@ export default function PredictionsPage() {
 
   return (
     <div className="space-y-8">
-      <h1 className="text-2xl font-bold">Partidos</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Partidos</h1>
+        <RefreshButton />
+      </div>
       {stages.map((stage) => (
         <section key={stage} className="space-y-4">
           <h2 className="sticky top-14 z-10 -mx-4 bg-background/90 px-4 py-2 text-lg font-bold text-grass backdrop-blur">

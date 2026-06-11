@@ -33,21 +33,21 @@ create table if not exists matches (
 create index if not exists matches_stage_idx on matches (stage);
 create index if not exists matches_date_idx on matches (match_date);
 
--- Predicciones por partido
+-- Predicciones por partido.
+-- Ganador (1X2) y marcador exacto son apuestas independientes y aditivas:
+--   +1 acertar ganador, +2 acertar marcador (máx 3). Al menos una es obligatoria.
 create table if not exists predictions (
   id           uuid default gen_random_uuid() primary key,
   player_id    uuid references players(id) on delete cascade,
   match_id     uuid references matches(id) on delete cascade,
-  bet_type     text not null default 'score',   -- 'score' (marcador) | 'winner' (1X2)
-  pred_home    int,                              -- requerido si bet_type = 'score'
+  pred_home    int,             -- apuesta de marcador (opcional)
   pred_away    int,
-  pred_outcome text,                             -- '1' | 'X' | '2' si bet_type = 'winner'
+  pred_outcome text,            -- apuesta de ganador: '1' | 'X' | '2' (opcional)
   points       int default 0,
   unique(player_id, match_id),
-  constraint predictions_bet_shape check (
-    (bet_type = 'score'  and pred_home is not null and pred_away is not null)
-    or
-    (bet_type = 'winner' and pred_outcome in ('1', 'X', '2'))
+  constraint predictions_bet_present check (
+    pred_outcome in ('1', 'X', '2')
+    or (pred_home is not null and pred_away is not null)
   )
 );
 

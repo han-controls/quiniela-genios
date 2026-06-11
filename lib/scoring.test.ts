@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchPoints, specialPoints, outcome, predictionPoints } from './scoring';
+import { predictionPoints, specialPoints, outcome } from './scoring';
 
 describe('outcome', () => {
   it('detects home win, draw, away win', () => {
@@ -9,49 +9,47 @@ describe('outcome', () => {
   });
 });
 
-describe('matchPoints', () => {
-  it('gives 3 for exact score', () => {
-    expect(matchPoints(2, 1, 2, 1)).toBe(3);
-  });
-  it('gives 1 for correct 1X2 without exact score', () => {
-    expect(matchPoints(3, 1, 1, 0)).toBe(1);
-  });
-  it('gives 0 for wrong outcome', () => {
-    expect(matchPoints(1, 0, 0, 1)).toBe(0);
-  });
-  it('gives 3 for exact draw', () => {
-    expect(matchPoints(1, 1, 1, 1)).toBe(3);
-  });
-  it('gives 1 for correct draw with different score', () => {
-    expect(matchPoints(0, 0, 2, 2)).toBe(1);
-  });
-});
-
-describe('predictionPoints', () => {
-  it('score bet: exact gives 3', () => {
+describe('predictionPoints (aditivo: ganador +1, marcador +2)', () => {
+  it('solo ganador acertado = 1', () => {
     expect(
-      predictionPoints({ bet_type: 'score', pred_home: 2, pred_away: 1, pred_outcome: null }, 2, 1),
+      predictionPoints({ pred_home: null, pred_away: null, pred_outcome: '1' }, 3, 0),
+    ).toBe(1);
+  });
+
+  it('solo marcador exacto = 2', () => {
+    expect(
+      predictionPoints({ pred_home: 2, pred_away: 1, pred_outcome: null }, 2, 1),
+    ).toBe(2);
+  });
+
+  it('ganador + marcador, ambos correctos = 3', () => {
+    expect(
+      predictionPoints({ pred_home: 2, pred_away: 1, pred_outcome: '1' }, 2, 1),
     ).toBe(3);
   });
-  it('score bet: right outcome gives 1', () => {
+
+  it('apostó ambos pero solo acierta el ganador = 1', () => {
     expect(
-      predictionPoints({ bet_type: 'score', pred_home: 3, pred_away: 1, pred_outcome: null }, 1, 0),
+      predictionPoints({ pred_home: 2, pred_away: 1, pred_outcome: '1' }, 4, 0),
     ).toBe(1);
   });
-  it('winner bet: correct winner gives 1 (never 3)', () => {
+
+  it('marcador exacto sin apostar ganador no suma el +1 (=2)', () => {
     expect(
-      predictionPoints({ bet_type: 'winner', pred_home: null, pred_away: null, pred_outcome: '1' }, 4, 0),
-    ).toBe(1);
+      predictionPoints({ pred_home: 0, pred_away: 0, pred_outcome: null }, 0, 0),
+    ).toBe(2);
   });
-  it('winner bet: correct draw gives 1', () => {
+
+  it('todo incorrecto = 0', () => {
     expect(
-      predictionPoints({ bet_type: 'winner', pred_home: null, pred_away: null, pred_outcome: 'X' }, 2, 2),
-    ).toBe(1);
-  });
-  it('winner bet: wrong winner gives 0', () => {
-    expect(
-      predictionPoints({ bet_type: 'winner', pred_home: null, pred_away: null, pred_outcome: '2' }, 1, 0),
+      predictionPoints({ pred_home: 1, pred_away: 0, pred_outcome: '1' }, 0, 2),
     ).toBe(0);
+  });
+
+  it('empate: ganador X acertado = 1', () => {
+    expect(
+      predictionPoints({ pred_home: null, pred_away: null, pred_outcome: 'X' }, 2, 2),
+    ).toBe(1);
   });
 });
 
@@ -68,7 +66,7 @@ describe('specialPoints', () => {
       { champion: null, semis: ['France', 'Spain', 'Wrong', 'Brazil'] },
       { champion: 'Argentina', semifinalists: ['Brazil', 'France', 'Spain', 'England'] },
     );
-    expect(pts).toBe(9); // France, Spain, Brazil
+    expect(pts).toBe(9);
   });
   it('caps semifinalists and adds champion (max 22)', () => {
     const pts = specialPoints(

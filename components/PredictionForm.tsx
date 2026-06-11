@@ -5,58 +5,62 @@ import { createClient } from '@/lib/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
-import type { Prediction, BetType, Outcome } from '@/lib/types';
+import type { Prediction, Outcome } from '@/lib/types';
+
+export type SavedBet = Pick<Prediction, 'pred_home' | 'pred_away' | 'pred_outcome'>;
 
 interface Props {
   playerId: string;
   matchId: string;
   homeTeam: string;
   awayTeam: string;
-  initial?: Pick<Prediction, 'bet_type' | 'pred_home' | 'pred_away' | 'pred_outcome'> | null;
+  onSaved?: (saved: SavedBet) => void;
 }
 
-type SaveState = 'idle' | 'saving' | 'saved' | 'error';
+type SaveState = 'idle' | 'saving' | 'error';
 
-export function PredictionForm({ playerId, matchId, homeTeam, awayTeam, initial }: Props) {
-  const [mode, setMode] = useState<BetType>(initial?.bet_type ?? 'score');
-  const [home, setHome] = useState<string>(initial?.pred_home != null ? String(initial.pred_home) : '');
-  const [away, setAway] = useState<string>(initial?.pred_away != null ? String(initial.pred_away) : '');
-  const [pick, setPick] = useState<Outcome | ''>(initial?.pred_outcome ?? '');
+export function PredictionForm({ playerId, matchId, homeTeam, awayTeam, onSaved }: Props) {
+  const [pick, setPick] = useState<Outcome | ''>('');
+  const [home, setHome] = useState('');
+  const [away, setAway] = useState('');
   const [state, setState] = useState<SaveState>('idle');
 
-  async function save() {
-    const supabase = createClient();
-    let row: Record<string, unknown>;
+  const hasWinner = pick !== '';
+  const hasScore = home !== '' && away !== '';
 
-    if (mode === 'score') {
-      if (home === '' || away === '') return setState('error');
-      row = {
-        player_id: playerId,
-        match_id: matchId,
-        bet_type: 'score',
-        pred_home: Number(home),
-        pred_away: Number(away),
-        pred_outcome: null,
-      };
-    } else {
-      if (pick === '') return setState('error');
-      row = {
-        player_id: playerId,
-        match_id: matchId,
-        bet_type: 'winner',
-        pred_home: null,
-        pred_away: null,
-        pred_outcome: pick,
-      };
-    }
+  async function save() {
+    // Al menos una de las dos apuestas; el marcador debe estar completo si se empieza.
+    if (!hasWinner && !hasScore) return setState('error');
+    if ((home !== '') !== (away !== '')) return setState('error');
+
+    const saved: SavedBet = {
+      pred_outcome: hasWinner ? (pick as Outcome) : null,
+      pred_home: hasScore ? Number(home) : null,
+      pred_away: hasScore ? Number(away) : null,
+    };
 
     setState('saving');
-    const { error } = await supabase
-      .from('predictions')
-      .upsert(row, { onConflict: 'player_id,match_id' });
-    setState(error ? 'error' : 'saved');
-    if (!error) setTimeout(() => setState('idle'), 1500);
+    // insert (no upsert): la apuesta es definitiva, no se puede cambiar.
+    const { error } = await supabaseInsert(playerId, matchId, saved);
+    if (error) {
+      setState('error');
+      return;
+    }
+    onSaved?.(saved);
   }
+
+  const pickButton = (value: Outcome, label: string) => (
+    <button
+      type="button"
+      onClick={() => setPick((p) => (p === value ? '' : value))}
+      className={cn(
+        'flex-1 rounded-md border px-2 py-2 text-xs font-semibold transition-colors',
+        pick === value ? 'border-grass bg-grass text-primary-foreground' : 'border-input hover:bg-accent',
+      )}
+    >
+      {label}
+    </button>
+  );
 
   const scoreInput = (value: string, setter: (v: string) => void, label: string) => (
     <Input
@@ -66,66 +70,57 @@ export function PredictionForm({ playerId, matchId, homeTeam, awayTeam, initial 
       maxLength={1}
       value={value}
       onChange={(e) => setter(e.target.value.replace(/[^0-9]/g, '').slice(0, 1))}
-      className="h-12 w-12 p-0 text-center text-xl font-bold"
+      className="h-11 w-11 p-0 text-center text-xl font-bold"
     />
-  );
-
-  const pickButton = (value: Outcome, label: string) => (
-    <button
-      type="button"
-      onClick={() => setPick(value)}
-      className={cn(
-        'flex-1 rounded-md border px-2 py-2 text-xs font-semibold transition-colors',
-        pick === value
-          ? 'border-grass bg-grass text-primary-foreground'
-          : 'border-input hover:bg-accent',
-      )}
-    >
-      {label}
-    </button>
   );
 
   return (
     <div className="space-y-3">
-      {/* Toggle de tipo de apuesta */}
-      <div className="mx-auto flex w-fit rounded-lg bg-secondary p-0.5 text-xs">
-        {(['score', 'winner'] as const).map((m) => (
-          <button
-            key={m}
-            type="button"
-            onClick={() => setMode(m)}
-            className={cn(
-              'rounded-md px-3 py-1 font-medium transition-colors',
-              mode === m ? 'bg-background text-foreground shadow' : 'text-muted-foreground',
-            )}
-          >
-            {m === 'score' ? 'Marcador' : 'Solo ganador'}
-          </button>
-        ))}
-      </div>
-
-      {mode === 'score' ? (
-        <div className="flex items-center justify-center gap-3">
-          {scoreInput(home, setHome, 'Goles local')}
-          <span className="text-muted-foreground">–</span>
-          {scoreInput(away, setAway, 'Goles visitante')}
-        </div>
-      ) : (
+      {/* Apuesta de ganador (+1) */}
+      <div className="space-y-1">
+        <p className="text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Ganador · +1 pt
+        </p>
         <div className="flex items-stretch gap-2">
           {pickButton('1', homeTeam)}
           {pickButton('X', 'Empate')}
           {pickButton('2', awayTeam)}
         </div>
-      )}
+      </div>
 
-      <div className="flex items-center justify-center gap-2">
+      {/* Apuesta de marcador exacto (+2) */}
+      <div className="space-y-1">
+        <p className="text-center text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+          Marcador exacto · +2 pts
+        </p>
+        <div className="flex items-center justify-center gap-3">
+          {scoreInput(home, setHome, 'Goles local')}
+          <span className="text-muted-foreground">–</span>
+          {scoreInput(away, setAway, 'Goles visitante')}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center gap-1 pt-1">
         <Button onClick={save} size="sm" disabled={state === 'saving'}>
-          {state === 'saving' ? '…' : state === 'saved' ? '✓ Guardado' : 'Guardar'}
+          {state === 'saving' ? 'Guardando…' : 'Guardar apuesta'}
         </Button>
-        {state === 'error' && (
-          <span className="text-xs text-destructive">Completa tu apuesta</span>
+        {state === 'error' ? (
+          <span className="text-xs text-destructive">
+            Apuesta al ganador, al marcador o a ambos
+          </span>
+        ) : (
+          <span className="text-[11px] text-muted-foreground">
+            🔒 Una vez guardada no podrás cambiarla
+          </span>
         )}
       </div>
     </div>
   );
+}
+
+async function supabaseInsert(playerId: string, matchId: string, saved: SavedBet) {
+  const supabase = createClient();
+  return supabase
+    .from('predictions')
+    .insert({ player_id: playerId, match_id: matchId, ...saved });
 }

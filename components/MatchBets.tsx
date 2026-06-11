@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
 import { Badge } from '@/components/ui/badge';
-import { type BetType, type Outcome, outcomeLabel } from '@/lib/types';
+import { type Outcome, outcomeLabel } from '@/lib/types';
 
 interface Props {
   matchId: string;
@@ -23,7 +23,6 @@ interface Bet {
 // PostgREST devuelve la relación embebida como objeto (to-one) o null.
 interface Row {
   player_id: string;
-  bet_type: BetType;
   pred_home: number | null;
   pred_away: number | null;
   pred_outcome: Outcome | null;
@@ -40,19 +39,21 @@ export function MatchBets({ matchId, finished, currentPlayerId, homeTeam, awayTe
     async function load() {
       const { data } = await supabase
         .from('predictions')
-        .select('player_id, bet_type, pred_home, pred_away, pred_outcome, points, players(name)')
+        .select('player_id, pred_home, pred_away, pred_outcome, points, players(name)')
         .eq('match_id', matchId)
         .returns<Row[]>();
 
-      const rows: Bet[] = (data ?? []).map((r) => ({
-        player_id: r.player_id,
-        name: r.players?.name ?? '—',
-        label:
-          r.bet_type === 'winner' && r.pred_outcome
-            ? outcomeLabel(r.pred_outcome, homeTeam, awayTeam)
-            : `${r.pred_home}–${r.pred_away}`,
-        points: r.points,
-      }));
+      const rows: Bet[] = (data ?? []).map((r) => {
+        const parts: string[] = [];
+        if (r.pred_outcome) parts.push(outcomeLabel(r.pred_outcome, homeTeam, awayTeam));
+        if (r.pred_home != null && r.pred_away != null) parts.push(`${r.pred_home}–${r.pred_away}`);
+        return {
+          player_id: r.player_id,
+          name: r.players?.name ?? '—',
+          label: parts.join(' · '),
+          points: r.points,
+        };
+      });
 
       rows.sort((a, b) =>
         finished ? b.points - a.points || a.name.localeCompare(b.name) : a.name.localeCompare(b.name),

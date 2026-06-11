@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { matchPoints, specialPoints, outcome } from './scoring';
+import { matchPoints, specialPoints, outcome, predictionPoints } from './scoring';
 
 describe('outcome', () => {
   it('detects home win, draw, away win', () => {
@@ -24,6 +24,34 @@ describe('matchPoints', () => {
   });
   it('gives 1 for correct draw with different score', () => {
     expect(matchPoints(0, 0, 2, 2)).toBe(1);
+  });
+});
+
+describe('predictionPoints', () => {
+  it('score bet: exact gives 3', () => {
+    expect(
+      predictionPoints({ bet_type: 'score', pred_home: 2, pred_away: 1, pred_outcome: null }, 2, 1),
+    ).toBe(3);
+  });
+  it('score bet: right outcome gives 1', () => {
+    expect(
+      predictionPoints({ bet_type: 'score', pred_home: 3, pred_away: 1, pred_outcome: null }, 1, 0),
+    ).toBe(1);
+  });
+  it('winner bet: correct winner gives 1 (never 3)', () => {
+    expect(
+      predictionPoints({ bet_type: 'winner', pred_home: null, pred_away: null, pred_outcome: '1' }, 4, 0),
+    ).toBe(1);
+  });
+  it('winner bet: correct draw gives 1', () => {
+    expect(
+      predictionPoints({ bet_type: 'winner', pred_home: null, pred_away: null, pred_outcome: 'X' }, 2, 2),
+    ).toBe(1);
+  });
+  it('winner bet: wrong winner gives 0', () => {
+    expect(
+      predictionPoints({ bet_type: 'winner', pred_home: null, pred_away: null, pred_outcome: '2' }, 1, 0),
+    ).toBe(0);
   });
 });
 

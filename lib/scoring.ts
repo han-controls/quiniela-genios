@@ -30,6 +30,31 @@ export function matchPoints(
   return 0;
 }
 
+// Forma mínima de una predicción para puntuarla (sirve para ambos tipos de apuesta).
+export interface ScorablePrediction {
+  bet_type: string;
+  pred_home: number | null;
+  pred_away: number | null;
+  pred_outcome: string | null;
+}
+
+/**
+ * Puntos de una predicción contra el resultado real, según su tipo:
+ * - 'score'  → marcador exacto (3) / resultado 1X2 (1) / fallo (0)
+ * - 'winner' → ganador correcto (1) / fallo (0). Nunca da 3.
+ */
+export function predictionPoints(
+  pred: ScorablePrediction,
+  realHome: number,
+  realAway: number,
+): number {
+  if (pred.bet_type === 'winner') {
+    return pred.pred_outcome === outcome(realHome, realAway) ? POINTS_OUTCOME : 0;
+  }
+  if (pred.pred_home == null || pred.pred_away == null) return 0;
+  return matchPoints(pred.pred_home, pred.pred_away, realHome, realAway);
+}
+
 /**
  * Puntos de las predicciones especiales.
  * - 10 pts: campeón correcto

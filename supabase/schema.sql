@@ -35,13 +35,20 @@ create index if not exists matches_date_idx on matches (match_date);
 
 -- Predicciones por partido
 create table if not exists predictions (
-  id         uuid default gen_random_uuid() primary key,
-  player_id  uuid references players(id) on delete cascade,
-  match_id   uuid references matches(id) on delete cascade,
-  pred_home  int not null,
-  pred_away  int not null,
-  points     int default 0,
-  unique(player_id, match_id)
+  id           uuid default gen_random_uuid() primary key,
+  player_id    uuid references players(id) on delete cascade,
+  match_id     uuid references matches(id) on delete cascade,
+  bet_type     text not null default 'score',   -- 'score' (marcador) | 'winner' (1X2)
+  pred_home    int,                              -- requerido si bet_type = 'score'
+  pred_away    int,
+  pred_outcome text,                             -- '1' | 'X' | '2' si bet_type = 'winner'
+  points       int default 0,
+  unique(player_id, match_id),
+  constraint predictions_bet_shape check (
+    (bet_type = 'score'  and pred_home is not null and pred_away is not null)
+    or
+    (bet_type = 'winner' and pred_outcome in ('1', 'X', '2'))
+  )
 );
 
 create index if not exists predictions_match_idx on predictions (match_id);

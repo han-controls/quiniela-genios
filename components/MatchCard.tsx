@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { ChevronDown, Users } from 'lucide-react';
-import type { Match, Prediction } from '@/lib/types';
+import { type Match, type Prediction, outcomeLabel } from '@/lib/types';
 import { PredictionForm } from './PredictionForm';
 import { MatchBets } from './MatchBets';
 import { Card, CardContent } from '@/components/ui/card';
@@ -80,7 +80,13 @@ export function MatchCard({ match, prediction, playerId }: Props) {
                 Entra con tu nombre para predecir.
               </p>
             ) : (
-              <PredictionForm playerId={playerId} matchId={match.id} initial={prediction} />
+              <PredictionForm
+                playerId={playerId}
+                matchId={match.id}
+                homeTeam={match.home_team}
+                awayTeam={match.away_team}
+                initial={prediction}
+              />
             )
           ) : (
             <>
@@ -90,7 +96,9 @@ export function MatchCard({ match, prediction, playerId }: Props) {
                     <span className="text-muted-foreground">
                       Tu predicción:{' '}
                       <strong className="text-foreground">
-                        {prediction.pred_home}–{prediction.pred_away}
+                        {prediction.bet_type === 'winner' && prediction.pred_outcome
+                          ? outcomeLabel(prediction.pred_outcome, match.home_team, match.away_team)
+                          : `${prediction.pred_home}–${prediction.pred_away}`}
                       </strong>
                       {finished && (
                         <Badge className="ml-2 bg-grass/20 text-grass" variant="outline">
@@ -116,7 +124,13 @@ export function MatchCard({ match, prediction, playerId }: Props) {
               </button>
 
               {showBets && (
-                <MatchBets matchId={match.id} finished={finished} currentPlayerId={playerId} />
+                <MatchBets
+                  matchId={match.id}
+                  finished={finished}
+                  currentPlayerId={playerId}
+                  homeTeam={match.home_team}
+                  awayTeam={match.away_team}
+                />
               )}
             </>
           )}

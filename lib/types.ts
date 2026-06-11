@@ -23,13 +23,25 @@ export interface Player {
   created_at: string;
 }
 
+export type BetType = 'score' | 'winner';
+export type Outcome = '1' | 'X' | '2';
+
 export interface Prediction {
   id: string;
   player_id: string;
   match_id: string;
-  pred_home: number;
-  pred_away: number;
+  bet_type: BetType;
+  pred_home: number | null;
+  pred_away: number | null;
+  pred_outcome: Outcome | null;
   points: number;
+}
+
+// Etiqueta legible de un resultado 1X2 con los nombres de los equipos.
+export function outcomeLabel(o: Outcome, home: string, away: string): string {
+  if (o === '1') return `Gana ${home}`;
+  if (o === '2') return `Gana ${away}`;
+  return 'Empate';
 }
 
 export interface SpecialPrediction {

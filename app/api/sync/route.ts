@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { getWorldCupMatches, mapStatus, type ApiMatch } from '@/lib/football-api';
-import { matchPoints, specialPoints } from '@/lib/scoring';
+import { predictionPoints, specialPoints } from '@/lib/scoring';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -58,7 +58,7 @@ async function handleSync(req: NextRequest) {
     const matchIds = finished.map((m) => m.id);
     const { data: preds } = await supabase
       .from('predictions')
-      .select('id, match_id, pred_home, pred_away, points')
+      .select('id, match_id, bet_type, pred_home, pred_away, pred_outcome, points')
       .in('match_id', matchIds);
 
     const scoreById = new Map(
@@ -68,7 +68,7 @@ async function handleSync(req: NextRequest) {
     for (const p of preds ?? []) {
       const real = scoreById.get(p.match_id);
       if (!real) continue;
-      const pts = matchPoints(p.pred_home, p.pred_away, real.h, real.a);
+      const pts = predictionPoints(p, real.h, real.a);
       if (pts !== p.points) {
         const { error } = await supabase
           .from('predictions')
